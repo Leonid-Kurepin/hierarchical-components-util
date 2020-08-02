@@ -1,27 +1,32 @@
 ﻿using ASKON_TestTask.Domain;
 using ASKON_TestTask.Persistence;
 using ASKON_TestTask.Persistence.Entities;
+using GemBox.Document;
+using GemBox.Document.Tables;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using DetailInTreeView = ASKON_TestTask.Domain.DetailInTreeView;
+using Task = System.Threading.Tasks.Task;
 
 namespace ASKON_TestTask
 {
     public partial class Form1 : Form
     {
         private List<ToolStripMenuItem> contextMenuItemsToHide = new List<ToolStripMenuItem>();
-        private TreeNode nodeItemSelected = new TreeNode();
+        private TreeNode selectedNode = new TreeNode();
 
         private DetailInTreeView SelectedNodeTag
         {
-            get => nodeItemSelected.Tag as DetailInTreeView;
-            set => nodeItemSelected.Tag = value;
+            get => selectedNode.Tag as DetailInTreeView;
+            set => selectedNode.Tag = value;
         }
 
         public Form1()
@@ -84,6 +89,8 @@ namespace ASKON_TestTask
             contextMenu.Closed += contextMenu_Closed;
 
             #endregion
+
+            treeView.NodeMouseClick += (sender, args) => treeView.SelectedNode = args.Node;
         }
 
 
@@ -202,20 +209,6 @@ namespace ASKON_TestTask
                     treeView.Nodes.Add(treeNode);
                 }
             }
-
-            /*
-            TreeNode tovarNode = new TreeNode("Товары");
-                // Добавляем новый дочерний узел к tovarNode
-                tovarNode.Nodes.Add(new TreeNode("Смартфоны"));
-                // Добавляем tovarNode вместе с дочерними узлами в TreeView
-                treeView1.Nodes.Add(tovarNode);
-                // Добавляем второй очерний узел к первому узлу в TreeView
-                treeView1.Nodes[0].Nodes.Add(new TreeNode("Планшеты"));
-                // удаление у первого узла второго дочернего подузла
-                //treeView1.Nodes[0].Nodes.RemoveAt(1);
-                // Удаление узла tovarNode и всех его дочерних узлов
-                //treeView1.Nodes.Remove(tovarNode);
-            */
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -223,15 +216,14 @@ namespace ASKON_TestTask
             DoSomethingAsync();
         }
 
-        private void treeView1_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        private void treeView_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
             // Loading third generation children nodes and adding them to the tree
             if (e.Node.Tag != null)
             {
-                //var parentDetail = e.Node.Parent.Tag as DetailInTreeView;
-                var selectedDetail = e.Node.Tag as DetailInTreeView;
+                var selectedDetailTag = SelectedNodeTag;
 
-                if (selectedDetail.IsThirdGenLoaded)
+                if (selectedDetailTag.IsThirdGenLoaded)
                 {
                     return;
                 }
@@ -311,7 +303,7 @@ namespace ASKON_TestTask
                     }
                 }
 
-                selectedDetail.IsThirdGenLoaded = true;
+                selectedDetailTag.IsThirdGenLoaded = true;
             }
         }
 
@@ -320,7 +312,7 @@ namespace ASKON_TestTask
         {
             if (e.Button == MouseButtons.Right)
             {
-                nodeItemSelected = e.Node;
+                selectedNode = e.Node;
 
                 foreach (var contextMenuItem in contextMenuItemsToHide)
                 {
@@ -345,7 +337,7 @@ namespace ASKON_TestTask
                 case "contextMenuItemRename":
                 {
                     // Renaming detail
-                    var selectedNodeTag = nodeItemSelected.Tag as DetailInTreeView;
+                    var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
 
                     var newDetailName = "Шатун3";
                     DetailInTreeView detailInTree = null;
@@ -386,7 +378,7 @@ namespace ASKON_TestTask
                 case "contextMenuItemDelete":
                 {
                     // Deleting detail    
-                    var selectedNodeTag = nodeItemSelected.Tag as DetailInTreeView;
+                    var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
 
 
                     using (var context = new TestTaskContext())
@@ -416,7 +408,7 @@ namespace ASKON_TestTask
                         context.SaveChanges();
                     }
 
-                    treeView.Nodes.Remove(nodeItemSelected);
+                    treeView.Nodes.Remove(selectedNode);
 
                     break;
                 }
@@ -444,7 +436,7 @@ namespace ASKON_TestTask
                             .ForEach(x => childRelations
                                 .ForEach(y =>
                                     {
-                                        if (x.DetailId != SelectedNodeTag.DetailId &&
+                                        if (x.DetailId != rootDetailId &&
                                             y.DetailId != x.DetailId &&
                                             y.HierarchyLevel.IsDescendantOf(x.HierarchyLevel))
                                         {
@@ -470,7 +462,65 @@ namespace ASKON_TestTask
                                 })
                             .ToList();
 
-                        var rs = 1;
+                            #region CreateWordDocument
+
+                            var reportsDirectoryPath = Directory.GetCurrentDirectory() + "\\reports";
+
+                            if (!Directory.Exists(reportsDirectoryPath))
+                            {
+                                Directory.CreateDirectory(reportsDirectoryPath);
+                            }
+
+                            int rowCount = detailsForReport.Count;
+
+                            ComponentInfo.SetLicense("FREE-LIMITED-KEY");
+
+                            var document = new DocumentModel();
+
+                            var section = new Section(document);
+                            document.Sections.Add(section);
+
+                            // Create a table with 100% width.
+                            var table = new Table(document);
+                            table.TableFormat.PreferredWidth = new TableWidth(100, TableWidthUnit.Percentage);
+                            section.Blocks.Add(table);
+
+                            for (int r = 0; r < rowCount; r++)
+                            {
+                                // Create a row and add it to table.
+                                var row = new TableRow(document);
+                                table.Rows.Add(row);
+
+                                // Add detail name 
+                                var cell = new TableCell(document);
+                                cell.CellFormat.PreferredWidth = new TableWidth(50, TableWidthUnit.Percentage);
+                                var paragraph = new Paragraph(document, $"{detailsForReport[r].DetailName}");
+
+                                cell.Blocks.Add(paragraph);
+                                row.Cells.Add(cell);
+
+                                // Add detail count 
+                                cell = new TableCell(document);
+                                cell.CellFormat.PreferredWidth = new TableWidth(50, TableWidthUnit.Percentage);
+                                paragraph = new Paragraph(document, $"{detailsForReport[r].Count} шт");
+
+                                cell.Blocks.Add(paragraph);
+                                row.Cells.Add(cell);
+                            }
+
+                            var exportTime = DateTime.Now.ToString("dd-MMM-yyyy", CultureInfo.InvariantCulture);
+                            var detailName = "Detail Name";
+                            var fileName = $"{detailName} {exportTime}.docx";
+
+                            var filePath = $"{reportsDirectoryPath}\\{fileName}";
+
+                            document.Save(filePath);
+
+                            Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+
+                            #endregion
+
+                            var rs = 1;
                     }
 
                     break;
@@ -536,7 +586,7 @@ namespace ASKON_TestTask
                 case "contextMenuItemAddChild":
                 {
                     // Adding child detail
-                    var selectedNodeTag = nodeItemSelected.Tag as DetailInTreeView;
+                    var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
 
                     var detailsIdsForbiddenToAdd = new List<int>()
                     {
@@ -584,7 +634,7 @@ namespace ASKON_TestTask
 
                                 var isDetailAdded = false;
 
-                                foreach (TreeNode childTreeNode in nodeItemSelected.Nodes)
+                                foreach (TreeNode childTreeNode in selectedNode.Nodes)
                                 {
                                     var tag = childTreeNode.Tag as DetailInTreeView;
 
@@ -626,7 +676,7 @@ namespace ASKON_TestTask
                                     HierarchyLevel = addedDetailRelation.Entity.HierarchyLevel
                                 };
 
-                                nodeItemSelected.Nodes.Add(new TreeNode()
+                                selectedNode.Nodes.Add(new TreeNode()
                                 {
                                     Text = $"{childDetailInTree.Name} ({childDetailInTree.Count})",
                                     Tag = childDetailInTree
@@ -666,7 +716,7 @@ namespace ASKON_TestTask
                                 HierarchyLevel = addedRelation.Entity.HierarchyLevel
                             };
 
-                            nodeItemSelected.Nodes.Add(new TreeNode()
+                            selectedNode.Nodes.Add(new TreeNode()
                             {
                                 Text = $"{childDetailInTree.Name} ({childDetailInTree.Count})",
                                 Tag = childDetailInTree
@@ -687,7 +737,7 @@ namespace ASKON_TestTask
             int detailId,
             string newDetailName)
         {
-            if (nodeCollection.Any())
+            if (nodeCollection.Count > 0)
             {
                 foreach (TreeNode treeNode in nodeCollection)
                 {

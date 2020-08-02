@@ -49,11 +49,12 @@
             // treeView
             // 
             this.treeView.ContextMenuStrip = this.contextMenu;
+            this.treeView.HideSelection = false;
             this.treeView.Location = new System.Drawing.Point(12, 31);
             this.treeView.Name = "treeView";
             this.treeView.Size = new System.Drawing.Size(258, 358);
             this.treeView.TabIndex = 1;
-            this.treeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView1_BeforeExpand);
+            this.treeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView_BeforeExpand);
             this.treeView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView_NodeMouseClick);
             // 
             // contextMenu
