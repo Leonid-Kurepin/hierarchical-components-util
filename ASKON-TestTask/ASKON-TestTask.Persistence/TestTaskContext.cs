@@ -1,5 +1,4 @@
-﻿using ASKON_TestTask.Domain;
-using ASKON_TestTask.Persistence.Entities;
+﻿using ASKON_TestTask.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASKON_TestTask.Persistence
@@ -20,11 +19,14 @@ namespace ASKON_TestTask.Persistence
 
         public DbSet<Detail> Details { get; set; }
         public DbSet<DetailRelation> DetailRelations { get; set; }
+
+        /*
         public virtual DbSet<DetailForReport> DetailsForReport { get; set; }
+        */
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(_connectionString, 
+            optionsBuilder.UseSqlServer(_connectionString,
                 x => x.UseHierarchyId());
         }
 
@@ -34,12 +36,14 @@ namespace ASKON_TestTask.Persistence
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AssemblyMarker).Assembly);
 
+            /*
             modelBuilder.Entity<DetailForReport>(entity =>
             {
                 entity.HasNoKey();
                 entity.Property(e => e.DetailName);
                 entity.Property(e => e.Count);
             });
+            */
 
             #region TestData
 

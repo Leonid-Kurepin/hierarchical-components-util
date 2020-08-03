@@ -1,4 +1,4 @@
-﻿namespace ASKON_TestTask
+﻿namespace ASKON_TestTask.Forms
 {
     partial class AddParentForm
     {
@@ -69,7 +69,7 @@
             this.btnAddParent.TabIndex = 6;
             this.btnAddParent.Text = "Add";
             this.btnAddParent.UseVisualStyleBackColor = true;
-            this.btnAddParent.Click += new System.EventHandler(this.btnAddParent_Click);
+            this.btnAddParent.Click += new System.EventHandler(this.btnAddParent_ClickAsync);
             // 
             // labelAddParentError
             // 

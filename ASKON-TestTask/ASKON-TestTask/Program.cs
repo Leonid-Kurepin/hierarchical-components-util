@@ -1,13 +1,16 @@
-using System;
-using System.Windows.Forms;
+using ASKON_TestTask.Forms;
 using ASKON_TestTask.Persistence;
+using ASKON_TestTask.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Windows.Forms;
 
 namespace ASKON_TestTask
 {
     static class Program
     {
+        // Should be moved from code
         private const string _connectionString =
             @"Server=.\SQLEXPRESS;Database=ASKON-TestTaskDb;Trusted_Connection=True;";
 
@@ -40,7 +43,10 @@ namespace ASKON_TestTask
             });
 
             services.AddScoped<MainForm>();
-            services.AddScoped<AddParentForm>();
+
+            services.AddScoped<FormsHelper>();
+
+            services.AddScoped<IDetailService, DetailService>();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace ASKON_TestTask
+﻿namespace ASKON_TestTask.Forms
 {
     partial class MessageForm
     {
@@ -70,7 +70,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Label labelSuccesMessage;
         private System.Windows.Forms.Button btnOk;
         private System.Windows.Forms.Label labelSuccessMessage;
     }

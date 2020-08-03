@@ -1,4 +1,4 @@
-﻿namespace ASKON_TestTask
+﻿namespace ASKON_TestTask.Forms
 {
     partial class RenameDetailForm
     {
@@ -80,7 +80,7 @@
             this.btnRenameDetail.TabIndex = 6;
             this.btnRenameDetail.Text = "Rename";
             this.btnRenameDetail.UseVisualStyleBackColor = true;
-            this.btnRenameDetail.Click += new System.EventHandler(this.btnRenameDetail_Click);
+            this.btnRenameDetail.Click += new System.EventHandler(this.btnRenameDetail_ClickAsync);
             // 
             // RenameDetailForm
             // 
@@ -95,6 +95,7 @@
             this.Controls.Add(this.tbNewDetailName);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Name = "RenameDetailForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "RenameDetailForm";
             this.ResumeLayout(false);
             this.PerformLayout();

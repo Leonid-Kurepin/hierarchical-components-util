@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
 
-namespace ASKON_TestTask
+namespace ASKON_TestTask.Forms
 {
     public partial class MessageForm : Form
     {

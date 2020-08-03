@@ -5,15 +5,18 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>ASKON_TestTask</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
+    <StartupObject>ASKON_TestTask.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="GemBox.Document" Version="31.0.1215" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ASKON-TestTask.Domain\ASKON-TestTask.Domain.csproj" />
     <ProjectReference Include="..\ASKON-TestTask.Persistence\ASKON-TestTask.Persistence.csproj" />
+    <ProjectReference Include="..\ASKON-TestTask.Services\ASKON-TestTask.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>

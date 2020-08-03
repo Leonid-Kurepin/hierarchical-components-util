@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASKON-TestTask", "ASKON-TestTask\ASKON-TestTask.csproj", "{1A14D078-7826-4A0F-B095-5219ABAA0507}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASKON-TestTask", "ASKON-TestTask\ASKON-TestTask.csproj", "{1A14D078-7826-4A0F-B095-5219ABAA0507}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASKON-TestTask.Persistence", "ASKON-TestTask.Persistence\ASKON-TestTask.Persistence.csproj", "{090EA8D8-7468-48EE-ABFF-8D9332E29DF1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASKON-TestTask.Persistence", "ASKON-TestTask.Persistence\ASKON-TestTask.Persistence.csproj", "{090EA8D8-7468-48EE-ABFF-8D9332E29DF1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASKON-TestTask.Domain", "ASKON-TestTask.Domain\ASKON-TestTask.Domain.csproj", "{B54D8474-5FC2-43E3-83A1-3745111CF341}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASKON-TestTask.Domain", "ASKON-TestTask.Domain\ASKON-TestTask.Domain.csproj", "{B54D8474-5FC2-43E3-83A1-3745111CF341}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASKON-TestTask.Services", "ASKON-TestTask.Services\ASKON-TestTask.Services.csproj", "{A4106594-15EF-4B69-8520-70CE7339759B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASKON-TestTask.Services", "ASKON-TestTask.Services\ASKON-TestTask.Services.csproj", "{A4106594-15EF-4B69-8520-70CE7339759B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASKON-TestTask.Common", "ASKON-TestTask.Common\ASKON-TestTask.Common.csproj", "{D73694FC-E975-4EB3-9968-ED7159EAEF4B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{A4106594-15EF-4B69-8520-70CE7339759B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A4106594-15EF-4B69-8520-70CE7339759B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A4106594-15EF-4B69-8520-70CE7339759B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D73694FC-E975-4EB3-9968-ED7159EAEF4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D73694FC-E975-4EB3-9968-ED7159EAEF4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D73694FC-E975-4EB3-9968-ED7159EAEF4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D73694FC-E975-4EB3-9968-ED7159EAEF4B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

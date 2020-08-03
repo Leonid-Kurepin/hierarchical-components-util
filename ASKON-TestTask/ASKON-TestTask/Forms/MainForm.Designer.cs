@@ -1,4 +1,4 @@
-﻿namespace ASKON_TestTask
+﻿namespace ASKON_TestTask.Forms
 {
     partial class MainForm
     {
@@ -41,14 +41,14 @@
             this.treeView.Name = "treeView";
             this.treeView.Size = new System.Drawing.Size(427, 358);
             this.treeView.TabIndex = 1;
-            this.treeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView_BeforeExpand);
+            this.treeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView_BeforeExpandAsync);
             this.treeView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView_NodeMouseClick);
             // 
             // contextMenu
             // 
             this.contextMenu.Name = "contextMenu";
             this.contextMenu.Size = new System.Drawing.Size(61, 4);
-            this.contextMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.contextMenu_ItemClicked);
+            this.contextMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.contextMenu_ItemClickedAsync);
             // 
             // MainForm
             // 
@@ -58,7 +58,7 @@
             this.Controls.Add(this.treeView);
             this.Name = "MainForm";
             this.Text = "Components Base";
-            this.Load += new System.EventHandler(this.Form1_Load);
+            this.Load += new System.EventHandler(this.MainForm_LoadAsync);
             this.ResumeLayout(false);
 
         }
