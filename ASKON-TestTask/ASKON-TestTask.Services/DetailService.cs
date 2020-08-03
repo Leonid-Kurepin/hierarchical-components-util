@@ -173,6 +173,7 @@ namespace ASKON_TestTask.Services
                         DetailName = g.First().Detail.Name,
                         Count = g.Sum(dr => dr.Count)
                     })
+                .OrderBy(x => x.DetailName)
                 .ToList();
 
             return detailsForReport;

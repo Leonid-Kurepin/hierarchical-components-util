@@ -371,27 +371,31 @@ namespace ASKON_TestTask.Forms
                             addChildDetailForm.EnteredName,
                             addChildDetailForm.CountToAdd);
 
-                        var existedChildDetailHierarchyId =
-                            childHierarchyIds.SingleOrDefault(x => x == addedChildDetail.HierarchyLevel);
-
-                        // Handle case when detail is already present in the selected scope
-                        if (existedChildDetailHierarchyId != null)
+                        if (childHierarchyIds != null)
                         {
-                            foreach (TreeNode childNode in selectedNode.Nodes)
+                            var existedChildDetailHierarchyId =
+                                childHierarchyIds.SingleOrDefault(x => x == addedChildDetail.HierarchyLevel);
+
+                            // Handle case when detail is already present in the selected scope
+                            if (existedChildDetailHierarchyId != null)
                             {
-                                var childNodeTag = childNode.Tag as DetailInTreeView;
-
-                                if (childNodeTag.HierarchyLevel == existedChildDetailHierarchyId)
+                                foreach (TreeNode childNode in selectedNode.Nodes)
                                 {
-                                    childNode.Text = DetailNameInTree(addedChildDetail.Name, addedChildDetail.Count);
-                                    childNode.Tag = addedChildDetail;
+                                    var childNodeTag = childNode.Tag as DetailInTreeView;
+
+                                    if (childNodeTag.HierarchyLevel == existedChildDetailHierarchyId)
+                                    {
+                                        childNode.Text = DetailNameInTree(addedChildDetail.Name,
+                                            addedChildDetail.Count);
+                                        childNode.Tag = addedChildDetail;
+                                    }
                                 }
+
+                                ShowMessageDialog("Success added" +
+                                                  "\n\rto the presented child");
+
+                                return;
                             }
-
-                            ShowMessageDialog("Success added" +
-                                              "\n\rto the presented child");
-
-                            return;
                         }
 
                         selectedNode.Nodes.Add(new TreeNode
