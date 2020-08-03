@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>ASKON_TestTask.Services</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ASKON-TestTask.Common\ASKON-TestTask.Common.csproj" />
+    <ProjectReference Include="..\ASKON-TestTask.Domain\ASKON-TestTask.Domain.csproj" />
+    <ProjectReference Include="..\ASKON-TestTask.Persistence\ASKON-TestTask.Persistence.csproj" />
+  </ItemGroup>
+
+</Project>
