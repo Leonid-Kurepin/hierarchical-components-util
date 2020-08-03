@@ -30,7 +30,7 @@ namespace ASKON_TestTask
 
             using (ServiceProvider serviceProvider = services.BuildServiceProvider())
             {
-               serviceProvider.UpdateDatabase();
+                serviceProvider.UpdateDatabase();
 
                 var mainForm = serviceProvider.GetRequiredService<MainForm>();
                 Application.Run(mainForm);
