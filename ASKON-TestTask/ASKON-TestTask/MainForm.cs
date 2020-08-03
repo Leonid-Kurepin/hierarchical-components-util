@@ -18,19 +18,38 @@ using Task = System.Threading.Tasks.Task;
 
 namespace ASKON_TestTask
 {
-    public partial class Form1 : Form
+    public partial class MainForm : Form
     {
+        private readonly TestTaskContext _context;
+
         private List<ToolStripMenuItem> contextMenuItemsToHide = new List<ToolStripMenuItem>();
         private TreeNode selectedNode = new TreeNode();
 
         private DetailInTreeView SelectedNodeTag
         {
             get => selectedNode.Tag as DetailInTreeView;
-            set => selectedNode.Tag = value;
         }
 
-        public Form1()
+        static ImageList _imageList;
+        private static ImageList ImageList
         {
+            get
+            {
+                if (_imageList == null)
+                {
+                    _imageList = new ImageList();
+                    _imageList.Images.Add("NodeIcon", Properties.Resources.gear_icon_64x64);
+                }
+                return _imageList;
+            }
+        }
+
+
+        public MainForm(TestTaskContext context)
+        {
+            _context = context;
+
+
             InitializeComponent();
 
             #region InitContextMenu
@@ -91,6 +110,8 @@ namespace ASKON_TestTask
             #endregion
 
             treeView.NodeMouseClick += (sender, args) => treeView.SelectedNode = args.Node;
+
+            treeView.ImageList = ImageList;
         }
 
 
@@ -221,6 +242,8 @@ namespace ASKON_TestTask
             // Loading third generation children nodes and adding them to the tree
             if (e.Node.Tag != null)
             {
+                selectedNode = e.Node;
+
                 var selectedDetailTag = SelectedNodeTag;
 
                 if (selectedDetailTag.IsThirdGenLoaded)
@@ -336,12 +359,9 @@ namespace ASKON_TestTask
             {
                 case "contextMenuItemRename":
                 {
-                    // Renaming detail
-                    var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
 
-                    var newDetailName = "Шатун3";
-                    DetailInTreeView detailInTree = null;
 
+                    /*
                     using (var context = new TestTaskContext())
                     {
                         var isUniqueName = !context.Details.Any(x => x.Name == newDetailName);
@@ -371,6 +391,48 @@ namespace ASKON_TestTask
                             retrievedDetailToUpdate.DetailId,
                             newDetailName);
                     }
+                    */
+
+                    // Renaming detail
+                    using (var renameDetailForm = new RenameDetailForm(_context))
+                    {
+                        if (renameDetailForm.ShowDialog() == DialogResult.OK)
+                        {
+                            var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
+
+                            var newDetailName = renameDetailForm.EnteredName;
+
+                            var isUniqueName = !_context.Details.Any(x => x.Name == newDetailName);
+
+                            if (!isUniqueName)
+                            {
+                                return;
+                            }
+
+                            var selectedDetailId = selectedNodeTag.DetailId;
+
+                            var retrievedDetailToUpdate = _context.Details
+                                .SingleOrDefault(x => x.DetailId == selectedDetailId);
+
+                            if (retrievedDetailToUpdate == null)
+                            {
+                                return;
+                            }
+
+                            retrievedDetailToUpdate.Name = newDetailName;
+
+                            _context.SaveChanges();
+
+
+                            UpdateTreeViewNodesName(
+                                treeView.Nodes,
+                                retrievedDetailToUpdate.DetailId,
+                                newDetailName);
+
+                            ShowMessageDialog("Success renamed!");
+                        }
+                    }
+
 
                     break;
                 }
@@ -409,6 +471,8 @@ namespace ASKON_TestTask
                     }
 
                     treeView.Nodes.Remove(selectedNode);
+
+                    ShowMessageDialog("Success deleted!");
 
                     break;
                 }
@@ -462,65 +526,66 @@ namespace ASKON_TestTask
                                 })
                             .ToList();
 
-                            #region CreateWordDocument
+                        #region CreateWordDocument
 
-                            var reportsDirectoryPath = Directory.GetCurrentDirectory() + "\\reports";
+                        var reportsDirectoryPath = Directory.GetCurrentDirectory() + "\\reports";
 
-                            if (!Directory.Exists(reportsDirectoryPath))
-                            {
-                                Directory.CreateDirectory(reportsDirectoryPath);
-                            }
+                        if (!Directory.Exists(reportsDirectoryPath))
+                        {
+                            Directory.CreateDirectory(reportsDirectoryPath);
+                        }
 
-                            int rowCount = detailsForReport.Count;
+                        int rowCount = detailsForReport.Count;
 
-                            ComponentInfo.SetLicense("FREE-LIMITED-KEY");
+                        ComponentInfo.SetLicense("FREE-LIMITED-KEY");
 
-                            var document = new DocumentModel();
+                        var document = new DocumentModel();
 
-                            var section = new Section(document);
-                            document.Sections.Add(section);
+                        var section = new Section(document);
+                        document.Sections.Add(section);
 
-                            // Create a table with 100% width.
-                            var table = new Table(document);
-                            table.TableFormat.PreferredWidth = new TableWidth(100, TableWidthUnit.Percentage);
-                            section.Blocks.Add(table);
+                        // Create a table with 100% width.
+                        var table = new Table(document);
+                        table.TableFormat.PreferredWidth = new TableWidth(100, TableWidthUnit.Percentage);
+                        section.Blocks.Add(table);
 
-                            for (int r = 0; r < rowCount; r++)
-                            {
-                                // Create a row and add it to table.
-                                var row = new TableRow(document);
-                                table.Rows.Add(row);
+                        for (int r = 0; r < rowCount; r++)
+                        {
+                            // Create a row and add it to table.
+                            var row = new TableRow(document);
+                            table.Rows.Add(row);
 
-                                // Add detail name 
-                                var cell = new TableCell(document);
-                                cell.CellFormat.PreferredWidth = new TableWidth(50, TableWidthUnit.Percentage);
-                                var paragraph = new Paragraph(document, $"{detailsForReport[r].DetailName}");
+                            // Add detail name 
+                            var cell = new TableCell(document);
+                            cell.CellFormat.PreferredWidth = new TableWidth(50, TableWidthUnit.Percentage);
+                            var paragraph = new Paragraph(document, $"{detailsForReport[r].DetailName}");
 
-                                cell.Blocks.Add(paragraph);
-                                row.Cells.Add(cell);
+                            cell.Blocks.Add(paragraph);
+                            row.Cells.Add(cell);
 
-                                // Add detail count 
-                                cell = new TableCell(document);
-                                cell.CellFormat.PreferredWidth = new TableWidth(50, TableWidthUnit.Percentage);
-                                paragraph = new Paragraph(document, $"{detailsForReport[r].Count} шт");
+                            // Add detail count 
+                            cell = new TableCell(document);
+                            cell.CellFormat.PreferredWidth = new TableWidth(50, TableWidthUnit.Percentage);
+                            paragraph = new Paragraph(document, $"{detailsForReport[r].Count} шт");
 
-                                cell.Blocks.Add(paragraph);
-                                row.Cells.Add(cell);
-                            }
+                            cell.Blocks.Add(paragraph);
+                            row.Cells.Add(cell);
+                        }
 
-                            var exportTime = DateTime.Now.ToString("dd-MMM-yyyy", CultureInfo.InvariantCulture);
-                            var detailName = "Detail Name";
-                            var fileName = $"{detailName} {exportTime}.docx";
+                        var exportTime = DateTime.Now.ToString("dd-MMM-yyyy", CultureInfo.InvariantCulture);
+                        var detailName = SelectedNodeTag.Name;
+                        var fileName = $"{detailName} {exportTime}.docx";
 
-                            var filePath = $"{reportsDirectoryPath}\\{fileName}";
+                        var filePath = $"{reportsDirectoryPath}\\{fileName}";
 
-                            document.Save(filePath);
+                        document.Save(filePath);
 
-                            Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+                        Process.Start(new ProcessStartInfo(filePath) {UseShellExecute = true});
 
-                            #endregion
+                        #endregion
 
-                            var rs = 1;
+                        ShowMessageDialog("Success exported!");
+
                     }
 
                     break;
@@ -535,195 +600,222 @@ namespace ASKON_TestTask
             {
                 case "contextMenuItemAddParent":
 
-                    // Adding parent component
-                    var newDetailName = "Двигатель 336";
-                    DetailInTreeView detailInTree = null;
-
-                    using (var context = new TestTaskContext())
+                    using (var addParentForm = new AddParentForm(_context))
                     {
-                        var isUniqueName = !context.Details.Any(x => x.Name == newDetailName);
-
-                        if (!isUniqueName)
+                        if (addParentForm.ShowDialog() == DialogResult.OK)
                         {
-                            return;
+                            // Adding parent component
+                            var newDetailName = addParentForm.EnteredName;
+                            DetailInTreeView detailInTree = null;
+
+                            using (var context = new TestTaskContext())
+                            {
+                                var isUniqueName = !context.Details.Any(x => x.Name == newDetailName);
+
+                                if (!isUniqueName)
+                                {
+                                    return;
+                                }
+
+                                var addedDetail = context.Details.Add(new Detail()
+                                {
+                                    Name = newDetailName
+                                });
+
+                                context.SaveChanges();
+
+                                var addedRelation = context.DetailRelations.Add(new DetailRelation()
+                                {
+                                    DetailId = addedDetail.Entity.DetailId,
+                                    HierarchyLevel = HierarchyId.Parse($"/{addedDetail.Entity.DetailId}/")
+                                });
+
+                                context.SaveChanges();
+
+                                detailInTree = new DetailInTreeView()
+                                {
+                                    DetailId = addedDetail.Entity.DetailId,
+                                    Name = addedDetail.Entity.Name,
+                                    HierarchyLevel = addedRelation.Entity.HierarchyLevel
+                                };
+                            }
+
+                            if (detailInTree != null)
+                            {
+                                treeView.Nodes.Add(new TreeNode()
+                                {
+                                    Text = newDetailName,
+                                    Tag = detailInTree
+                                });
+                            }
+
+                            ShowMessageDialog("Success added!");
                         }
-
-                        var addedDetail = context.Details.Add(new Detail()
-                        {
-                            Name = newDetailName
-                        });
-
-                        context.SaveChanges();
-
-                        var addedRelation = context.DetailRelations.Add(new DetailRelation()
-                        {
-                            DetailId = addedDetail.Entity.DetailId,
-                            HierarchyLevel = HierarchyId.Parse($"/{addedDetail.Entity.DetailId}/")
-                        });
-
-                        context.SaveChanges();
-
-                        detailInTree = new DetailInTreeView()
-                        {
-                            DetailId = addedDetail.Entity.DetailId,
-                            Name = addedDetail.Entity.Name,
-                            HierarchyLevel = addedRelation.Entity.HierarchyLevel
-                        };
                     }
-
-                    if (detailInTree != null)
-                    {
-                        treeView.Nodes.Add(new TreeNode()
-                        {
-                            Text = newDetailName,
-                            Tag = detailInTree
-                        });
-                    }
-
 
                     break;
 
                 case "contextMenuItemAddChild":
                 {
                     // Adding child detail
-                    var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
 
-                    var detailsIdsForbiddenToAdd = new List<int>()
+                    using (var addChildDetailForm = new AddChildForm())
                     {
-                        selectedNodeTag.DetailId
-                    };
-
-                    var newChildDetailName = "Шатун";
-                    //var newChildDetailName = "Шатун";
-                    var countToAdd = 3;
-
-                    DetailInTreeView childDetailInTree = null;
-
-                    using (var context = new TestTaskContext())
-                    {
-                        var retrievedDetail = context.Details.SingleOrDefault(x => x.Name == newChildDetailName);
-
-                        HierarchyId hierarchyIdToAdd;
-                        //EntityEntry<Detail> addedDetail;
-                        //EntityEntry<Detail> addedDetailRelation;
-
-                        // Handle case when there is already a detail with such name in db
-                        if (retrievedDetail != null)
+                        if (addChildDetailForm.ShowDialog() == DialogResult.OK)
                         {
-                            var selectedNodeLevel = selectedNodeTag.HierarchyLevel.GetLevel();
+                            var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
 
-                            var ancestorsLevels = new List<HierarchyId>();
-
-                            for (int i = 1; i < selectedNodeLevel; i++)
+                            var detailsIdsForbiddenToAdd = new List<int>()
                             {
-                                ancestorsLevels.Add(selectedNodeTag.HierarchyLevel.GetAncestor(i));
-                            }
+                                selectedNodeTag.DetailId
+                            };
 
-                            var retrievedForbiddenIds = context.DetailRelations
-                                .Where(x => ancestorsLevels.Contains(x.HierarchyLevel))
-                                .Select(x => x.DetailId)
-                                .ToList();
+                            var newChildDetailName = addChildDetailForm.EnteredName;
+                            var countToAdd = addChildDetailForm.CountToAdd;
 
-                            detailsIdsForbiddenToAdd.AddRange(retrievedForbiddenIds);
-
-                            if (!detailsIdsForbiddenToAdd.Contains(retrievedDetail.DetailId))
+                            using (var context = new TestTaskContext())
                             {
-                                // Handle case when detail is already present in the selected scope
-                                hierarchyIdToAdd = HierarchyId.Parse(
-                                    selectedNodeTag.HierarchyLevel.ToString() + $"{retrievedDetail.DetailId}/");
+                                var retrievedDetail =
+                                    context.Details.SingleOrDefault(x => x.Name == newChildDetailName);
 
-                                var isDetailAdded = false;
+                                HierarchyId hierarchyIdToAdd;
+                                //EntityEntry<Detail> addedDetail;
+                                //EntityEntry<Detail> addedDetailRelation;
 
-                                foreach (TreeNode childTreeNode in selectedNode.Nodes)
+                                DetailInTreeView childDetailInTree;
+
+                                // Handle case when there is already a detail with such name in db
+                                if (retrievedDetail != null)
                                 {
-                                    var tag = childTreeNode.Tag as DetailInTreeView;
+                                    var selectedNodeLevel = selectedNodeTag.HierarchyLevel.GetLevel();
 
-                                    if (tag.HierarchyLevel.Equals(hierarchyIdToAdd))
+                                    var ancestorsLevels = new List<HierarchyId>();
+
+                                    for (var i = 1; i < selectedNodeLevel; i++)
                                     {
-                                        var relationToUpdate = context.DetailRelations
-                                            .SingleOrDefault(x => x.HierarchyLevel.Equals(hierarchyIdToAdd));
+                                        ancestorsLevels.Add(selectedNodeTag.HierarchyLevel.GetAncestor(i));
+                                    }
 
-                                        relationToUpdate.Count += countToAdd;
+                                    var retrievedForbiddenIds = context.DetailRelations
+                                        .Where(x => ancestorsLevels.Contains(x.HierarchyLevel))
+                                        .Select(x => x.DetailId)
+                                        .ToList();
+
+                                    detailsIdsForbiddenToAdd.AddRange(retrievedForbiddenIds);
+
+                                    if (!detailsIdsForbiddenToAdd.Contains(retrievedDetail.DetailId))
+                                    {
+                                        // Handle case when detail is already present in the selected scope
+                                        hierarchyIdToAdd = HierarchyId.Parse(
+                                            selectedNodeTag.HierarchyLevel.ToString() + $"{retrievedDetail.DetailId}/");
+
+                                        var isDetailAdded = false;
+
+                                        foreach (TreeNode childTreeNode in selectedNode.Nodes)
+                                        {
+                                            var tag = childTreeNode.Tag as DetailInTreeView;
+
+                                            if (tag.HierarchyLevel.Equals(hierarchyIdToAdd))
+                                            {
+                                                var relationToUpdate = context.DetailRelations
+                                                    .SingleOrDefault(x => x.HierarchyLevel.Equals(hierarchyIdToAdd));
+
+                                                relationToUpdate.Count += countToAdd;
+
+                                                context.SaveChanges();
+
+                                                tag.Count = relationToUpdate.Count;
+                                                childTreeNode.Text = $"{tag.Name} ({tag.Count})";
+                                                isDetailAdded = true;
+                                            }
+                                        }
+
+                                        if (isDetailAdded)
+                                        {
+                                            ShowMessageDialog("Success added" +
+                                                              "\n\rto the presented child");
+
+                                            return;
+                                        }
+
+                                        var addedDetailRelation = context.DetailRelations.Add(new DetailRelation()
+                                        {
+                                            DetailId = retrievedDetail.DetailId,
+                                            Count = countToAdd,
+                                            HierarchyLevel = HierarchyId.Parse(
+                                                selectedNodeTag.HierarchyLevel.ToString() +
+                                                $"{retrievedDetail.DetailId}/")
+                                        });
 
                                         context.SaveChanges();
 
-                                        tag.Count = relationToUpdate.Count;
-                                        childTreeNode.Text = $"{tag.Name} ({tag.Count})";
-                                        isDetailAdded = true;
+                                        childDetailInTree = new DetailInTreeView()
+                                        {
+                                            DetailId = retrievedDetail.DetailId,
+                                            Name = retrievedDetail.Name,
+                                            Count = addedDetailRelation.Entity.Count,
+                                            HierarchyLevel = addedDetailRelation.Entity.HierarchyLevel
+                                        };
+
+                                        selectedNode.Nodes.Add(new TreeNode()
+                                        {
+                                            Text = $"{childDetailInTree.Name} ({childDetailInTree.Count})",
+                                            Tag = childDetailInTree
+                                        });
+                                    }
+                                    else
+                                    {
+                                        ShowMessageDialog("You can\'t add the detail!" +
+                                                          "\n\rRecursive dependency" +
+                                                          "\n\ris not allowed.");
+
+                                        return;
                                     }
                                 }
 
-                                if (isDetailAdded)
+                                // Handle case when there is no detail with such name in db
+
+                                if (retrievedDetail == null)
                                 {
-                                    return;
+                                    var addedDetail = context.Details.Add(new Detail()
+                                    {
+                                        Name = newChildDetailName
+                                    });
+
+                                    context.SaveChanges();
+
+                                    hierarchyIdToAdd = HierarchyId.Parse(
+                                        selectedNodeTag.HierarchyLevel.ToString() + $"{addedDetail.Entity.DetailId}/");
+
+                                    var addedRelation = context.DetailRelations.Add(new DetailRelation()
+                                    {
+                                        DetailId = addedDetail.Entity.DetailId,
+                                        Count = countToAdd,
+                                        HierarchyLevel = hierarchyIdToAdd
+                                    });
+
+                                    context.SaveChanges();
+
+                                    childDetailInTree = new DetailInTreeView()
+                                    {
+                                        DetailId = addedDetail.Entity.DetailId,
+                                        Name = addedDetail.Entity.Name,
+                                        Count = addedRelation.Entity.Count,
+                                        HierarchyLevel = addedRelation.Entity.HierarchyLevel
+                                    };
+
+                                    selectedNode.Nodes.Add(new TreeNode()
+                                    {
+                                        Text = $"{childDetailInTree.Name} ({childDetailInTree.Count})",
+                                        Tag = childDetailInTree
+                                    });
                                 }
-
-                                var addedDetailRelation = context.DetailRelations.Add(new DetailRelation()
-                                {
-                                    DetailId = retrievedDetail.DetailId,
-                                    Count = countToAdd,
-                                    HierarchyLevel = HierarchyId.Parse(
-                                        selectedNodeTag.HierarchyLevel.ToString() + $"{retrievedDetail.DetailId}/")
-                                });
-
-                                context.SaveChanges();
-
-                                childDetailInTree = new DetailInTreeView()
-                                {
-                                    DetailId = retrievedDetail.DetailId,
-                                    Name = retrievedDetail.Name,
-                                    Count = addedDetailRelation.Entity.Count,
-                                    HierarchyLevel = addedDetailRelation.Entity.HierarchyLevel
-                                };
-
-                                selectedNode.Nodes.Add(new TreeNode()
-                                {
-                                    Text = $"{childDetailInTree.Name} ({childDetailInTree.Count})",
-                                    Tag = childDetailInTree
-                                });
                             }
 
-                            return;
-                        }
+                            ShowMessageDialog("Success added!");
 
-                        if (retrievedDetail == null)
-                        {
-                            // Handle case when there is no detail with such name in db
-                            var addedDetail = context.Details.Add(new Detail()
-                            {
-                                Name = newChildDetailName
-                            });
-
-                            context.SaveChanges();
-
-                            hierarchyIdToAdd = HierarchyId.Parse(
-                                selectedNodeTag.HierarchyLevel.ToString() + $"{addedDetail.Entity.DetailId}/");
-
-                            var addedRelation = context.DetailRelations.Add(new DetailRelation()
-                            {
-                                DetailId = addedDetail.Entity.DetailId,
-                                Count = countToAdd,
-                                HierarchyLevel = hierarchyIdToAdd
-                            });
-
-                            context.SaveChanges();
-
-                            childDetailInTree = new DetailInTreeView()
-                            {
-                                DetailId = addedDetail.Entity.DetailId,
-                                Name = addedDetail.Entity.Name,
-                                Count = addedRelation.Entity.Count,
-                                HierarchyLevel = addedRelation.Entity.HierarchyLevel
-                            };
-
-                            selectedNode.Nodes.Add(new TreeNode()
-                            {
-                                Text = $"{childDetailInTree.Name} ({childDetailInTree.Count})",
-                                Tag = childDetailInTree
-                            });
                         }
                     }
-
 
                     break;
                 }
@@ -753,6 +845,15 @@ namespace ASKON_TestTask
                         treeNode.Tag = nodeTag;
                     }
                 }
+            }
+        }
+
+        private void ShowMessageDialog(string messageText)
+        {
+            using var messageDialogForm = new MessageForm(messageText);
+            if (messageDialogForm.ShowDialog() == DialogResult.OK)
+            {
+                return;
             }
         }
     }

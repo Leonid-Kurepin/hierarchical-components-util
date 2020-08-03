@@ -6,12 +6,14 @@ namespace ASKON_TestTask.Persistence
 {
     public class TestTaskContext : DbContext
     {
-        /*
         public TestTaskContext(DbContextOptions<TestTaskContext> options)
             : base(options)
         {
         }
-        */
+
+        public TestTaskContext()
+        {
+        }
 
         private const string _connectionString =
             @"Server=.\SQLEXPRESS;Database=ASKON-TestTaskDb;Trusted_Connection=True;";
