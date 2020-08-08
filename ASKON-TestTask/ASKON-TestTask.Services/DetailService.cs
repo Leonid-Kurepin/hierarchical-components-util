@@ -136,7 +136,8 @@ namespace ASKON_TestTask.Services
                     _context.Details.RemoveRange(detailsToRemove);
 
                     await _context.SaveChangesAsync().ConfigureAwait(false);
-                    transaction.Commit();
+
+                    await transaction.CommitAsync();
                 }
                 catch (Exception)
                 {
@@ -225,6 +226,8 @@ namespace ASKON_TestTask.Services
                         Name = addedDetail.Entity.Name,
                         HierarchyLevel = addedRelation.Entity.HierarchyLevel
                     };
+
+                    await transaction.CommitAsync();
 
                     return detailEntity;
                 }
@@ -381,6 +384,8 @@ namespace ASKON_TestTask.Services
                             HierarchyLevel = addedRelation.Entity.HierarchyLevel
                         };
                     }
+
+                    await transaction.CommitAsync();
 
                     return childDetailInTree;
                 }
