@@ -137,7 +137,7 @@ namespace ASKON_TestTask.Services
 
                     await _context.SaveChangesAsync().ConfigureAwait(false);
 
-                    await transaction.CommitAsync();
+                    await transaction.CommitAsync().ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
@@ -227,7 +227,7 @@ namespace ASKON_TestTask.Services
                         HierarchyLevel = addedRelation.Entity.HierarchyLevel
                     };
 
-                    await transaction.CommitAsync();
+                    await transaction.CommitAsync().ConfigureAwait(false);
 
                     return detailEntity;
                 }
@@ -238,7 +238,7 @@ namespace ASKON_TestTask.Services
             }
         }
 
-        public async Task<DetailInTreeView> AddChildDetailAsync(
+        public async Task<List<DetailInTreeView>> AddChildDetailAsync(
             int parentDetailId,
             HierarchyId parentHierarchyId,
             List<HierarchyId> childHierarchyIds,
@@ -252,96 +252,51 @@ namespace ASKON_TestTask.Services
 
             await using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                try
+                var retrievedDetail =
+                    await _context.Details
+                        .AsNoTracking()
+                        .SingleOrDefaultAsync(x => x.Name == childDetailName)
+                        .ConfigureAwait(false);
+
+                HierarchyId hierarchyIdToAdd;
+
+                List<DetailInTreeView> childDetailsInTree = null;
+
+                // Handle case when there is already a detail with such name in db
+                if (retrievedDetail != null)
                 {
-                    var retrievedDetail =
-                        await _context.Details
-                            .AsNoTracking()
-                            .SingleOrDefaultAsync(x => x.Name == childDetailName)
-                            .ConfigureAwait(false);
+                    var selectedNodeLevel = parentHierarchyId.GetLevel();
 
-                    HierarchyId hierarchyIdToAdd;
+                    var ancestorsLevels = new List<HierarchyId>();
 
-                    DetailInTreeView childDetailInTree = null;
-
-                    // Handle case when there is already a detail with such name in db
-                    if (retrievedDetail != null)
+                    for (var i = 1; i < selectedNodeLevel; i++)
                     {
-                        var selectedNodeLevel = parentHierarchyId.GetLevel();
+                        ancestorsLevels.Add(parentHierarchyId.GetAncestor(i));
+                    }
 
-                        var ancestorsLevels = new List<HierarchyId>();
+                    var retrievedForbiddenIds = await _context.DetailRelations
+                        .AsNoTracking()
+                        .Where(x => ancestorsLevels.Contains(x.HierarchyLevel))
+                        .Select(x => x.DetailId)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
 
-                        for (var i = 1; i < selectedNodeLevel; i++)
-                        {
-                            ancestorsLevels.Add(parentHierarchyId.GetAncestor(i));
-                        }
+                    detailsIdsForbiddenToAdd.AddRange(retrievedForbiddenIds);
 
-                        var retrievedForbiddenIds = await _context.DetailRelations
-                            .AsNoTracking()
-                            .Where(x => ancestorsLevels.Contains(x.HierarchyLevel))
-                            .Select(x => x.DetailId)
-                            .ToListAsync()
-                            .ConfigureAwait(false);
+                    var existedDetailRelation = await _context.DetailRelations
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.DetailId == retrievedDetail.DetailId)
+                        .ConfigureAwait(false);
 
-                        detailsIdsForbiddenToAdd.AddRange(retrievedForbiddenIds);
+                    var existedChildRelations = await _context.DetailRelations
+                        .AsNoTracking()
+                        .Where(x => x.HierarchyLevel.IsDescendantOf(existedDetailRelation.HierarchyLevel))
+                        .ToListAsync()
+                        .ConfigureAwait(false);
 
-                        if (!detailsIdsForbiddenToAdd.Contains(retrievedDetail.DetailId))
-                        {
-                            // Handle case when detail is already present in the selected scope
-                            hierarchyIdToAdd = HierarchyId.Parse(
-                                parentHierarchyId.ToString() + $"{retrievedDetail.DetailId}/");
-
-                            if (childHierarchyIds != null)
-                            {
-                                foreach (var childHierarchyId in childHierarchyIds)
-                                {
-                                    if (childHierarchyId.Equals(hierarchyIdToAdd))
-                                    {
-                                        var relationToUpdate =
-                                            await _context.DetailRelations
-                                                .SingleOrDefaultAsync(x =>
-                                                    x.HierarchyLevel.Equals(hierarchyIdToAdd));
-
-                                        if (relationToUpdate != null)
-                                        {
-                                            relationToUpdate.Count += countToAdd;
-                                        }
-
-                                        await _context.SaveChangesAsync().ConfigureAwait(false);
-
-                                        return new DetailInTreeView
-                                        {
-                                            DetailId = relationToUpdate.DetailId,
-                                            Name = childDetailName,
-                                            Count = relationToUpdate.Count,
-                                            HierarchyLevel = relationToUpdate.HierarchyLevel
-                                        };
-                                    }
-                                }
-                            }
-
-
-                            var addedDetailRelation = _context.DetailRelations.Add(
-                                new DetailRelation
-                                {
-                                    DetailId = retrievedDetail.DetailId,
-                                    Count = countToAdd,
-                                    HierarchyLevel = HierarchyId.Parse(
-                                        parentHierarchyId.ToString() +
-                                        $"{retrievedDetail.DetailId}/")
-                                });
-
-                            await _context.SaveChangesAsync().ConfigureAwait(false);
-
-                            childDetailInTree = new DetailInTreeView()
-                            {
-                                DetailId = retrievedDetail.DetailId,
-                                Name = retrievedDetail.Name,
-                                Count = addedDetailRelation.Entity.Count,
-                                HierarchyLevel = addedDetailRelation.Entity.HierarchyLevel
-                            };
-                        }
-                        else
+                    existedChildRelations.ForEach(x =>
+                    {
+                        if (detailsIdsForbiddenToAdd.Contains(x.DetailId))
                         {
                             var exceptionMessage = "You can\'t add the detail!" +
                                                    "\n\rRecursive dependency" +
@@ -349,50 +304,135 @@ namespace ASKON_TestTask.Services
 
                             throw new BusinessLogicException(exceptionMessage);
                         }
+                    });
+
+                    hierarchyIdToAdd = HierarchyId.Parse(
+                        parentHierarchyId.ToString() +
+                        $"{retrievedDetail.DetailId}/");
+
+
+                    // Handle case when detail is already present in the selected scope
+                    if (childHierarchyIds != null)
+                    {
+                        foreach (var childHierarchyId in childHierarchyIds)
+                        {
+                            if (childHierarchyId.Equals(hierarchyIdToAdd))
+                            {
+                                var relationToUpdate =
+                                    await _context.DetailRelations
+                                        .SingleOrDefaultAsync(x =>
+                                            x.HierarchyLevel.Equals(hierarchyIdToAdd));
+
+                                if (relationToUpdate != null)
+                                {
+                                    relationToUpdate.Count += countToAdd;
+                                }
+
+                                await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                                var result = new List<DetailInTreeView>
+                                {
+                                    new DetailInTreeView
+                                    {
+                                        DetailId = relationToUpdate.DetailId,
+                                        Name = childDetailName,
+                                        Count = relationToUpdate.Count,
+                                        HierarchyLevel = relationToUpdate.HierarchyLevel
+                                    }
+                                };
+
+                                return result;
+                            }
+                        }
                     }
 
-                    // Handle case when there is no detail with such name in db
-                    if (retrievedDetail == null)
+                    // Handle case when detail is NOT present in the selected scope
+
+                    var parentHierarchyIdToChange = existedDetailRelation.HierarchyLevel.GetAncestor(1);
+
+                    var childRelationsToAdd = new List<DetailRelation>();
+
+                    existedChildRelations.ForEach(x =>
                     {
-                        var addedDetail = _context.Details.Add(
-                            new Detail
-                            {
-                                Name = childDetailName
-                            });
-
-                        await _context.SaveChangesAsync().ConfigureAwait(false);
-
-                        hierarchyIdToAdd = HierarchyId.Parse(
-                            parentHierarchyId.ToString() + $"{addedDetail.Entity.DetailId}/");
-
-                        var addedRelation = _context.DetailRelations.Add(
-                            new DetailRelation
-                            {
-                                DetailId = addedDetail.Entity.DetailId,
-                                Count = countToAdd,
-                                HierarchyLevel = hierarchyIdToAdd
-                            });
-
-                        await _context.SaveChangesAsync().ConfigureAwait(false);
+                        childRelationsToAdd
+                            .Add(
+                                new DetailRelation
+                                {
+                                    DetailId = x.DetailId,
+                                    HierarchyLevel = x.HierarchyLevel
+                                        .GetReparentedValue(parentHierarchyIdToChange, parentHierarchyId),
+                                    Count = x.DetailId == retrievedDetail.DetailId ? countToAdd : x.Count
+                                });
+                    });
 
 
-                        childDetailInTree = new DetailInTreeView()
+                    var rs = 1;
+
+                    _context.DetailRelations
+                        .AddRange(childRelationsToAdd);
+
+                    await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                    var hierarchyIdsOfAddedRelations =
+                        childRelationsToAdd.Select(x => x.HierarchyLevel);
+
+                    var resultListOfDetails = await _context.DetailRelations
+                        .AsNoTracking()
+                        .Include(x => x.Detail)
+                        .Where(x => hierarchyIdsOfAddedRelations.Contains(x.HierarchyLevel))
+                        .Select(x => new DetailInTreeView
+                        {
+                            DetailId = x.DetailId,
+                            Name = x.Detail.Name,
+                            Count = x.Count,
+                            HierarchyLevel = x.HierarchyLevel
+                        })
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+
+                    childDetailsInTree = resultListOfDetails;
+                }
+
+                // Handle case when there is no detail with such name in db
+                if (retrievedDetail == null)
+                {
+                    var addedDetail = _context.Details.Add(
+                        new Detail
+                        {
+                            Name = childDetailName
+                        });
+
+                    await _context.SaveChangesAsync().ConfigureAwait(false);
+
+                    hierarchyIdToAdd = HierarchyId.Parse(
+                        parentHierarchyId.ToString() + $"{addedDetail.Entity.DetailId}/");
+
+                    var addedRelation = _context.DetailRelations.Add(
+                        new DetailRelation
+                        {
+                            DetailId = addedDetail.Entity.DetailId,
+                            Count = countToAdd,
+                            HierarchyLevel = hierarchyIdToAdd
+                        });
+
+                    await _context.SaveChangesAsync().ConfigureAwait(false);
+
+
+                    childDetailsInTree = new List<DetailInTreeView>
+                    {
+                        new DetailInTreeView
                         {
                             DetailId = addedDetail.Entity.DetailId,
                             Name = addedDetail.Entity.Name,
                             Count = addedRelation.Entity.Count,
                             HierarchyLevel = addedRelation.Entity.HierarchyLevel
-                        };
-                    }
-
-                    await transaction.CommitAsync();
-
-                    return childDetailInTree;
+                        }
+                    };
                 }
-                catch (Exception)
-                {
-                    return null;
-                }
+
+                await transaction.CommitAsync().ConfigureAwait(false);
+
+                return childDetailsInTree;
             }
         }
     }

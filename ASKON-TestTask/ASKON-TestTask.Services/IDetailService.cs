@@ -66,15 +66,15 @@ namespace ASKON_TestTask.Services
 
 
         /// <summary>
-        /// Adds child detail with given name to the selected parent detail.
+        /// Adds child detail with all its descendants to the selected parent detail.
         /// </summary>
         /// <param name="parentDetailId">Id of selected parent detail.</param>
         /// <param name="parentHierarchyId">HierarchyId of selected parent detail.</param>
-        /// <param name="childHierarchyIds">List of HierarchyIds of children the selected parent detail.</param>
+        /// <param name="childHierarchyIds">List of HierarchyIds of the selected parent detail children.</param>
         /// <param name="childDetailName">Name of added child detail.</param>
         /// <param name="countToAdd">Count to add.</param>
-        /// <returns>Created detail entity.</returns>
-        public Task<DetailInTreeView> AddChildDetailAsync(
+        /// <returns>List of created details entities.</returns>
+        public Task<List<DetailInTreeView>> AddChildDetailAsync(
             int parentDetailId,
             HierarchyId parentHierarchyId,
             List<HierarchyId> childHierarchyIds,

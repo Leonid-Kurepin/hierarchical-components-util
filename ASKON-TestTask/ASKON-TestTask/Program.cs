@@ -10,7 +10,7 @@ namespace ASKON_TestTask
 {
     static class Program
     {
-        // Should be moved from code
+        // Should be removed from code
         private const string _connectionString =
             @"Server=.\SQLEXPRESS;Database=ASKON-TestTaskDb;Trusted_Connection=True;";
 

@@ -363,44 +363,57 @@ namespace ASKON_TestTask.Forms
 
                     try
                     {
-                        var addedChildDetail = await _detailService.AddChildDetailAsync(
+                        var addedChildDetails = await _detailService.AddChildDetailAsync(
                             SelectedNodeTag.DetailId,
                             SelectedNodeTag.HierarchyLevel,
                             childHierarchyIds,
                             addChildDetailForm.EnteredName,
                             addChildDetailForm.CountToAdd);
 
+                        DetailInTreeView addedDetail =
+                            addedChildDetails
+                                .SingleOrDefault(x => x.Name == addChildDetailForm.EnteredName);
+
                         if (childHierarchyIds != null)
                         {
-                            var existedChildDetailHierarchyId =
-                                childHierarchyIds.SingleOrDefault(x => x == addedChildDetail.HierarchyLevel);
-
                             // Handle case when detail is already present in the selected scope
-                            if (existedChildDetailHierarchyId != null)
+                            foreach (TreeNode childNode in selectedNode.Nodes)
                             {
-                                foreach (TreeNode childNode in selectedNode.Nodes)
+                                var childNodeTag = childNode.Tag as DetailInTreeView;
+
+                                if (childNodeTag.HierarchyLevel == addedDetail.HierarchyLevel)
                                 {
-                                    var childNodeTag = childNode.Tag as DetailInTreeView;
+                                    childNode.Text = DetailNameInTree(addedDetail.Name,
+                                        addedDetail.Count);
+                                    childNode.Tag = addedDetail;
 
-                                    if (childNodeTag.HierarchyLevel == existedChildDetailHierarchyId)
-                                    {
-                                        childNode.Text = DetailNameInTree(addedChildDetail.Name,
-                                            addedChildDetail.Count);
-                                        childNode.Tag = addedChildDetail;
-                                    }
+                                    ShowMessageDialog("Success added" +
+                                                      "\n\rto the presented child");
+
+                                    return;
                                 }
-
-                                ShowMessageDialog("Success added" +
-                                                  "\n\rto the presented child");
-
-                                return;
                             }
                         }
 
-                        selectedNode.Nodes.Add(new TreeNode
+                        var addedNodeIndex = selectedNode.Nodes.Add(new TreeNode
                         {
-                            Text = DetailNameInTree(addedChildDetail.Name, addedChildDetail.Count),
-                            Tag = addedChildDetail
+                            Text = DetailNameInTree(addedDetail.Name, addedDetail.Count),
+                            Tag = addedDetail
+                        });
+
+                        var addedNode = selectedNode.Nodes[addedNodeIndex];
+
+                        addedChildDetails.ForEach(x =>
+                        {
+                            if (addedDetail.HierarchyLevel == x.HierarchyLevel.GetAncestor(1))
+                            {
+                                addedNode.Nodes.Add(
+                                    new TreeNode
+                                    {
+                                        Text = DetailNameInTree(x.Name, x.Count),
+                                        Tag = x
+                                    });
+                            }
                         });
 
                         ShowMessageDialog("Success added!");
