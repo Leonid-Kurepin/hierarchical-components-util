@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>ComponentsUtil.Services</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ComponentsUtil.Common\ComponentsUtil.Common.csproj" />
+    <ProjectReference Include="..\ComponentsUtil.Domain\ComponentsUtil.Domain.csproj" />
+    <ProjectReference Include="..\ComponentsUtil.Persistence\ComponentsUtil.Persistence.csproj" />
+  </ItemGroup>
+
+</Project>
