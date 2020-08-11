@@ -24,7 +24,8 @@ namespace ASKON_TestTask.Forms
 
             var isValidDetailName = await _formsHelper.IsValidDetailNameAsync(
                 labelAddParentError,
-                EnteredName);
+                EnteredName,
+                false);
 
             if (isValidDetailName)
             {

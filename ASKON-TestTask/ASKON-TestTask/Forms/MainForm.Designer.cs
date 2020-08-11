@@ -54,9 +54,11 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(471, 419);
+            this.ClientSize = new System.Drawing.Size(451, 401);
             this.Controls.Add(this.treeView);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Name = "MainForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Components Base";
             this.Load += new System.EventHandler(this.MainForm_LoadAsync);
             this.ResumeLayout(false);

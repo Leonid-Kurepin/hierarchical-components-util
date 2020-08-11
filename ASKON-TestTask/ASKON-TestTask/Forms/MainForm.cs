@@ -29,6 +29,7 @@ namespace ASKON_TestTask.Forms
         private DetailInTreeView SelectedNodeTag => _selectedNode.Tag as DetailInTreeView;
 
         static ImageList _imageList;
+
         private static ImageList ImageList
         {
             get
@@ -38,6 +39,7 @@ namespace ASKON_TestTask.Forms
                     _imageList = new ImageList();
                     _imageList.Images.Add("NodeIcon", Properties.Resources.gear_icon_64x64);
                 }
+
                 return _imageList;
             }
         }
@@ -112,26 +114,26 @@ namespace ASKON_TestTask.Forms
             switch (e.ClickedItem.AccessibleName)
             {
                 case "contextMenuItemRename":
-                    {
-                        await RenameDetailAsync(SelectedNodeTag);
+                {
+                    await RenameDetailAsync(SelectedNodeTag);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case "contextMenuItemDelete":
-                    {
-                        await DeleteDetailAsync(SelectedNodeTag);
+                {
+                    await DeleteDetailAsync(_selectedNode);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case "contextMenuItemExport":
-                    {
-                        await CreateReportForDetailAsync(SelectedNodeTag);
+                {
+                    await CreateReportForDetailAsync(SelectedNodeTag);
 
-                        break;
+                    break;
 
-                    }
+                }
             }
         }
 
@@ -146,11 +148,11 @@ namespace ASKON_TestTask.Forms
                     break;
 
                 case "contextMenuItemAddChild":
-                    {
-                        await AddChildDetailAsync(_selectedNode);
+                {
+                    await AddChildDetailAsync(_selectedNode);
 
-                        break;
-                    }
+                    break;
+                }
 
             }
 
@@ -181,7 +183,8 @@ namespace ASKON_TestTask.Forms
                         DetailId = firstGenDetail.DetailId,
                         Name = firstGenDetail.Name,
                         HierarchyLevel = firstGenDetail.HierarchyLevel
-                    }
+                    },
+                    Name = firstGenDetail.HierarchyLevel.ToString()
                 };
 
                 var childDetails = secondGenDetails
@@ -199,7 +202,8 @@ namespace ASKON_TestTask.Forms
                             Name = childDetail.Name,
                             Count = childDetail.Count,
                             HierarchyLevel = childDetail.HierarchyLevel
-                        }
+                        },
+                        Name = childDetail.HierarchyLevel.ToString()
                     });
                 }
 
@@ -221,7 +225,7 @@ namespace ASKON_TestTask.Forms
                 .Where(x => x.Tag is DetailInTreeView)
                 .Select(x =>
                 {
-                    var tag = (DetailInTreeView)x.Tag;
+                    var tag = (DetailInTreeView) x.Tag;
                     return tag.HierarchyLevel;
                 })
                 .ToList();
@@ -244,7 +248,7 @@ namespace ASKON_TestTask.Forms
                     var childNodeToAddNodes =
                         childNodes.SingleOrDefault(x =>
                         {
-                            var tag = (DetailInTreeView)x.Tag;
+                            var tag = (DetailInTreeView) x.Tag;
                             return tag.HierarchyLevel.Equals(childNodesHierarchyLevel);
                         });
 
@@ -261,7 +265,8 @@ namespace ASKON_TestTask.Forms
                                     Name = thirdGenDetail.Name,
                                     Count = thirdGenDetail.Count,
                                     HierarchyLevel = thirdGenDetail.HierarchyLevel
-                                }
+                                },
+                                Name = thirdGenDetail.HierarchyLevel.ToString()
                             });
                         }
                     }
@@ -293,11 +298,43 @@ namespace ASKON_TestTask.Forms
             }
         }
 
-        private async Task DeleteDetailAsync(DetailInTreeView selectedNodeTag)
+        private async Task DeleteDetailAsync(TreeNode selectedNode)
         {
-            await _detailService.DeleteDetailWithDescendantsAsync(selectedNodeTag.HierarchyLevel);
+            List<HierarchyId> removedRelations = null;
 
-            treeView.Nodes.Remove(_selectedNode);
+            var selectedNodeTag = selectedNode.Tag as DetailInTreeView;
+
+            var parentNode = selectedNode.Parent;
+
+            if (parentNode != null)
+            {
+                var parentNodeTag = parentNode.Tag as DetailInTreeView;
+
+                removedRelations = await _detailService
+                    .DeleteDetailWithDescendantsAsync(
+                        selectedNodeTag.DetailId,
+                        parentNodeTag.DetailId);
+            }
+
+            if (parentNode == null)
+            {
+                removedRelations = await _detailService
+                    .DeleteDetailWithDescendantsAsync(
+                        selectedNodeTag.DetailId,
+                        null);
+            }
+
+            removedRelations.ForEach(removedHierarchyId =>
+            {
+                var nodeToRemove = treeView.Nodes
+                    .Find(removedHierarchyId.ToString(), true)
+                    .SingleOrDefault();
+
+                if (nodeToRemove != null)
+                {
+                    treeView.Nodes.Remove(nodeToRemove);
+                }
+            });
 
             ShowMessageDialog("Success deleted!");
         }
@@ -323,14 +360,50 @@ namespace ASKON_TestTask.Forms
                 {
                     // Adding parent component
                     var newDetailName = addParentForm.EnteredName;
-                    DetailInTreeView detailInTree = await _detailService.AddParentDetailAsync(newDetailName);
 
-                    if (detailInTree != null)
+                    List<DetailInTreeView> addedDetails = null;
+
+                    try
                     {
-                        treeView.Nodes.Add(new TreeNode()
+                        addedDetails = await _detailService.AddParentDetailAsync(newDetailName);
+                    }
+                    catch (BusinessLogicException e)
+                    {
+                        ShowMessageDialog(e.Message);
+
+                        return;
+                    }
+
+                    if (addedDetails != null)
+                    {
+                        var addedParentDetail = addedDetails
+                            .SingleOrDefault(x => x.Name
+                                .Equals(newDetailName, StringComparison.CurrentCultureIgnoreCase));
+
+                        var parentNodeIndex = treeView.Nodes.Add(new TreeNode()
                         {
                             Text = DetailNameInTree(newDetailName),
-                            Tag = detailInTree
+                            Tag = addedParentDetail,
+                            Name = addedParentDetail.HierarchyLevel.ToString()
+                        });
+
+                        var parentNode = treeView.Nodes[parentNodeIndex];
+
+                        addedDetails.ForEach(addedDetail =>
+                        {
+                            var isParentDetail = addedDetail.Name.Equals(newDetailName,
+                                StringComparison.CurrentCultureIgnoreCase);
+
+                            if (!isParentDetail &&
+                                addedDetail.HierarchyLevel.GetAncestor(1) == addedParentDetail.HierarchyLevel)
+                            {
+                                parentNode.Nodes.Add(new TreeNode
+                                {
+                                    Text = DetailNameInTree(addedDetail.Name),
+                                    Tag = addedDetail,
+                                    Name = addedDetail.HierarchyLevel.ToString()
+                                });
+                            }
                         });
                     }
 
@@ -345,70 +418,110 @@ namespace ASKON_TestTask.Forms
             {
                 if (addChildDetailForm.ShowDialog() == DialogResult.OK)
                 {
-                    List<HierarchyId> childHierarchyIds = null;
-
-                    var childDetailNodes = selectedNode.Nodes;
-
-                    if (childDetailNodes.Count > 0)
-                    {
-                        childHierarchyIds = new List<HierarchyId>();
-
-                        foreach (TreeNode childNode in selectedNode.Nodes)
-                        {
-                            var childNodeTag = childNode.Tag as DetailInTreeView;
-
-                            childHierarchyIds.Add(childNodeTag.HierarchyLevel);
-                        }
-                    }
+                    List<DetailInTreeView> addedChildDetails = null;
 
                     try
                     {
-                        var addedChildDetail = await _detailService.AddChildDetailAsync(
+                        addedChildDetails = await _detailService.AddChildDetailAsync(
                             SelectedNodeTag.DetailId,
-                            SelectedNodeTag.HierarchyLevel,
-                            childHierarchyIds,
                             addChildDetailForm.EnteredName,
                             addChildDetailForm.CountToAdd);
-
-                        if (childHierarchyIds != null)
-                        {
-                            var existedChildDetailHierarchyId =
-                                childHierarchyIds.SingleOrDefault(x => x == addedChildDetail.HierarchyLevel);
-
-                            // Handle case when detail is already present in the selected scope
-                            if (existedChildDetailHierarchyId != null)
-                            {
-                                foreach (TreeNode childNode in selectedNode.Nodes)
-                                {
-                                    var childNodeTag = childNode.Tag as DetailInTreeView;
-
-                                    if (childNodeTag.HierarchyLevel == existedChildDetailHierarchyId)
-                                    {
-                                        childNode.Text = DetailNameInTree(addedChildDetail.Name,
-                                            addedChildDetail.Count);
-                                        childNode.Tag = addedChildDetail;
-                                    }
-                                }
-
-                                ShowMessageDialog("Success added" +
-                                                  "\n\rto the presented child");
-
-                                return;
-                            }
-                        }
-
-                        selectedNode.Nodes.Add(new TreeNode
-                        {
-                            Text = DetailNameInTree(addedChildDetail.Name, addedChildDetail.Count),
-                            Tag = addedChildDetail
-                        });
-
-                        ShowMessageDialog("Success added!");
                     }
                     catch (BusinessLogicException e)
                     {
                         ShowMessageDialog(e.Message);
+
+                        return;
                     }
+
+                    var addedDetailId =
+                        addedChildDetails
+                            .FirstOrDefault(x => x.Name == addChildDetailForm.EnteredName).DetailId;
+
+                    var detailHierarchyIds = await _detailService
+                        .GetDetailHierarchyIdsAsync(SelectedNodeTag.DetailId);
+
+                    // Handle case when detail is already present in the selected scope
+                    var detailNodes = new List<TreeNode>();
+
+                    detailHierarchyIds.ForEach(detailHierarchyId =>
+                    {
+                        var detailNode = treeView.Nodes
+                            .Find(detailHierarchyId.ToString(), true)
+                            .SingleOrDefault();
+
+                        if (detailNode != null)
+                        {
+                            detailNodes.Add(detailNode);
+                        }
+                    });
+
+                    detailNodes.ForEach(detailNode =>
+                    {
+                        var detailNodeTag = detailNode.Tag as DetailInTreeView;
+
+                        var targetNodeHierarchyId = HierarchyId
+                            .Parse($"{detailNodeTag.HierarchyLevel}{addedDetailId}/");
+
+                        var addedDetail = addedChildDetails
+                            .SingleOrDefault(x => x.HierarchyLevel == targetNodeHierarchyId);
+
+                        var targetNodeToUpdate = treeView.Nodes
+                            .Find(targetNodeHierarchyId.ToString(), true)
+                            .SingleOrDefault();
+
+                        var parentNode = detailNode.Parent;
+                        DetailInTreeView parentNodeTag = parentNode == null ? null : parentNode.Tag as DetailInTreeView;
+
+                        // Update only if children already loaded for the detail
+                        // for which child detail is beening added
+                        if (parentNodeTag == null || parentNodeTag.IsThirdGenLoaded)
+                        {
+                            var detailNodeHierarchyId = detailNodeTag.HierarchyLevel;
+
+                            // Handle case when detail is already present in the selected scope
+                            if (targetNodeToUpdate != null)
+                            {
+                                targetNodeToUpdate.Text = DetailNameInTree(addedDetail.Name,
+                                    addedDetail.Count);
+                                targetNodeToUpdate.Tag = addedDetail;
+                            }
+
+                            // Handle case when detail is NOT present in the selected scope
+                            if (targetNodeToUpdate == null)
+                            {
+                                var addedNodeIndex = detailNode.Nodes.Add(new TreeNode
+                                {
+                                    Text = DetailNameInTree(addedDetail.Name, addedDetail.Count),
+                                    Tag = addedDetail,
+                                    Name = targetNodeHierarchyId.ToString()
+                                });
+
+                                if (detailNodeTag.IsThirdGenLoaded)
+                                {
+                                    var addedNode = detailNode.Nodes[addedNodeIndex];
+
+                                    addedChildDetails.ForEach(addedChildDetail =>
+                                    {
+                                        if (addedDetail.HierarchyLevel ==
+                                            addedChildDetail.HierarchyLevel.GetAncestor(1))
+                                        {
+                                            addedNode.Nodes.Add(
+                                                new TreeNode
+                                                {
+                                                    Text = DetailNameInTree(addedChildDetail.Name,
+                                                        addedChildDetail.Count),
+                                                    Tag = addedChildDetail,
+                                                    Name = addedChildDetail.HierarchyLevel.ToString()
+                                                });
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    });
+
+                    ShowMessageDialog("Success added!");
                 }
             }
         }
@@ -435,6 +548,7 @@ namespace ASKON_TestTask.Forms
                 }
             }
         }
+
 
         #endregion
 
@@ -493,14 +607,12 @@ namespace ASKON_TestTask.Forms
 
             document.Save(filePath);
 
-            Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(filePath) {UseShellExecute = true});
         }
 
 
         private string DetailNameInTree(string detailName, int? detailCount = null)
-            => detailCount == null ?
-                $"{detailName}" :
-                $"{detailName} ({detailCount})";
+            => detailCount == null ? $"{detailName}" : $"{detailName} ({detailCount})";
 
         private void InitContextMenu()
         {
